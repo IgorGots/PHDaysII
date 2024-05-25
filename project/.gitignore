@@ -1,0 +1,7 @@
+cache*
+data*
+temp*
+ClickHouse
+*.db
+volumes*
+celerybeat-schedule.db

@@ -1,0 +1,108 @@
+version: '2'
+
+services:
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - PYTHONIOENCODING=utf-8
+    volumes:
+      - .:/app
+    command: pytest --color=yes
+    profiles:
+      - donotstart
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ${PWD}/app:/app
+      - ${PWD}/volumes/tmp:/vtmp
+      - ${PWD}/volumes/tests:/tests
+      - ${PWD}/volumes/data:/data
+    command: uvicorn api:app --port 7000 --host 0.0.0.0
+    ports:
+      - 127.0.0.1:7000:7000
+    restart: on-failure:10
+    networks:
+      - net2
+
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ${PWD}/app:/app
+    depends_on:
+      - api
+    command: python /app/tg_bot.py
+    restart: on-failure:10
+    networks:
+      - net2
+    depends_on:
+      - api
+
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - DIR_CACHE=/cache
+      - NLTK_DATA=/nltk_data
+    volumes:
+      - ${PWD}/app:/app
+      - ${PWD}/volumes/cache:/cache
+      - ${PWD}/volumes/data:/data
+      - ${PWD}/volumes/corpus:/corpus
+    command: python /app/celery_worker.py
+    depends_on:
+      - redis
+      - clickhouse
+    networks:
+      - net2
+
+  redis:
+    image: redis:7.0
+    command: [sh, -c, "rm -f /data/dump.rdb && redis-server"]
+    ports:
+      - 127.0.0.1:6379:6379
+    networks:
+      - net2
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1.5.6
+    volumes:
+      - ${PWD}/volumes/ClickHouse/data:/var/lib/clickhouse/
+      - ${PWD}/volumes/ClickHouse/logs:/var/log/clickhouse-server/
+    ports:
+      - 127.0.0.1:8123:8123
+      - 127.0.0.1:9000:9000
+    networks:
+      - net2
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+
+networks:
+  net2:
+    name: net2
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 2001:db8:a::/64
+          gateway: 2001:db8:a::1

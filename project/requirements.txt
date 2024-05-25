@@ -1,0 +1,30 @@
+langchain
+langchain-community
+
+unstructured
+markdown
+clickhouse-connect
+tiktoken
+nltk==3.8.1
+bs4
+
+yandexcloud
+
+# API
+fastapi; python_version >= "3.11" and python_version < "4.0"
+uvicorn; python_version >= "3.11" and python_version < "4.0"
+pydantic
+
+# WORKER
+redis
+celery==5.3.6
+gitpython
+
+# TELEGRAM
+pyTelegramBotAPI
+telegramify-markdown
+
+# SYS
+pytest
+flake8
+mypy
